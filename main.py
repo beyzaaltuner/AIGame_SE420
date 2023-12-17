@@ -93,10 +93,14 @@ def a_star_search(start, goal, max_expanded_nodes=10):
             print(f"Goal reached! Final Path: {current_path}, Cost: {g}")
             return
 
-        for neighbor, cost in current_node.neighbors:
+        neighbors = [(neighbor, cost) for neighbor, cost in current_node.neighbors if neighbor.row == current_node.row]
+        neighbors.sort(key=lambda x, g=g: (g + x[1], x[0].row, x[0].col))
+
+        for neighbor, cost in neighbors:
             h_neighbor = manhattan_distance(neighbor, goal)
             f = g + cost + h_neighbor
             heapq.heappush(heap, (f, g + cost, neighbor.id, neighbor, current_path))
+
 
 # Call the function to connect neighbors
 connect_neighbors()
