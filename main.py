@@ -1,5 +1,6 @@
 import heapq
 import itertools  # Used for generating unique identifiers
+import tkinter as tk
 
 
 class Node:
@@ -14,6 +15,9 @@ class Node:
 
     def add_neighbor(self, neighbor, cost):
         self.neighbors.append((neighbor, cost))
+
+    def remove_neighbor(self, neighbor):
+        self.neighbors = [(n, cost) for n, cost in self.neighbors if n != neighbor]    
 
 
 # Create a 3x3 grid of nodes
@@ -40,6 +44,25 @@ def connect_neighbors():
             # Connect with top neighbor
             if row > 0:
                 current_node.add_neighbor(grid[row - 1][col], 1)
+
+    # Allow the user to add walls between nodes
+    add_wall_between_nodes()            
+
+def add_wall_between_nodes():
+    print("Enter the coordinates of the first node (row col): ")
+    row1, col1 = map(int, input().split())
+
+    print("Enter the coordinates of the second node (row col): ")
+    row2, col2 = map(int, input().split())
+
+    # Check if the input coordinates are valid
+    if 0 <= row1 < 3 and 0 <= col1 < 3 and 0 <= row2 < 3 and 0 <= col2 < 3:
+        # Remove neighbors to create a wall
+        grid[row1][col1].remove_neighbor(grid[row2][col2])
+        grid[row2][col2].remove_neighbor(grid[row1][col1])
+        print("Wall added successfully!")
+    else:
+        print("Invalid coordinates. Please enter coordinates within the grid (0-2).")
 
 
 # Uniform Cost Search Algorithm
@@ -107,7 +130,7 @@ connect_neighbors()
 
 # Set the source and goal nodes
 source_node = grid[0][0]
-goal_node = grid[2][0]
+goal_node = grid[0][2]
 
 # Run Uniform Cost Search
 uniform_cost_search(source_node, goal_node)
