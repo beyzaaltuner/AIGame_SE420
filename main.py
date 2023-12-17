@@ -1,98 +1,111 @@
 import heapq
+import itertools  # Used for generating unique identifiers
+
 
 class Node:
-    def __init__(self, state, cost, heuristic, parent=None):
-        self.state = state
-        self.cost = cost
-        self.heuristic = heuristic
-        self.parent = parent
+    _ids = itertools.count()
 
-    def __lt__(self, other):
-        return (self.cost + self.heuristic) < (other.cost + other.heuristic)
+    def __init__(self, row, col, value='_'):
+        self.row = row
+        self.col = col
+        self.value = value
+        self.neighbors = []
+        self.id = next(self._ids)
 
-def manhattan_distance(coord1, coord2):
-    # Calculate Manhattan distance between two sets of coordinates
-    x1, y1 = coord1
-    x2, y2 = coord2
-    return abs(x1 - x2) + abs(y1 - y2)
+    def add_neighbor(self, neighbor, cost):
+        self.neighbors.append((neighbor, cost))
 
-def uniform_cost_search(graph, start, goal):
-    frontier = []
-    heapq.heappush(frontier, Node(start, 0, 0))
-    explored = set()
 
-    while frontier:
-        current_node = heapq.heappop(frontier)
+# Create a 3x3 grid of nodes
+grid = [[Node(row, col) for col in range(3)] for row in range(3)]
 
-        if current_node.state == goal:
-            path = []
-            while current_node:
-                path.insert(0, current_node.state)
-                current_node = current_node.parent
-            return path
+# Function to connect neighbors in the grid
+def connect_neighbors():
+    for row in range(3):
+        for col in range(3):
+            current_node = grid[row][col]
 
-        explored.add(current_node.state)
+            # Connect with right neighbor
+            if col < 2:
+                current_node.add_neighbor(grid[row][col + 1], 2)
 
-        for neighbor, cost in graph[current_node.state].items():
-            if neighbor not in explored:
-                new_cost = current_node.cost + cost
-                new_node = Node(neighbor, new_cost, 0, current_node)
-                heapq.heappush(frontier, new_node)
+            # Connect with left neighbor
+            if col > 0:
+                current_node.add_neighbor(grid[row][col - 1], 2)
 
-    return []
+            # Connect with bottom neighbor
+            if row < 2:
+                current_node.add_neighbor(grid[row + 1][col], 1)
 
-def a_star_search(graph, start, goal, heuristic):
-    frontier = []
-    heapq.heappush(frontier, Node(start, 0, heuristic(start, goal)))
-    explored = set()
+            # Connect with top neighbor
+            if row > 0:
+                current_node.add_neighbor(grid[row - 1][col], 1)
 
-    while frontier:
-        current_node = heapq.heappop(frontier)
 
-        if current_node.state == goal:
-            path = []
-            while current_node:
-                path.insert(0, current_node.state)
-                current_node = current_node.parent
-            return path
+# Uniform Cost Search Algorithm
+def uniform_cost_search(start, goal, max_expanded_nodes=10):
+    heap = [(0, start.id, start, [])]  # Priority queue to store (cost, id, node, path) tuples
+    visited = set()
 
-        explored.add(current_node.state)
+    while heap and len(visited) < max_expanded_nodes:
+        current_cost, _, current_node, current_path = heapq.heappop(heap)
+        
+        if current_node in visited:
+            continue
 
-        for neighbor, cost in graph[current_node.state].items():
-            if neighbor not in explored:
-                new_cost = current_node.cost + cost
-                heuristic_value = heuristic(neighbor, goal)
-                new_node = Node(neighbor, new_cost, heuristic_value, current_node)
-                heapq.heappush(frontier, new_node)
+        visited.add(current_node)
 
-    return []
+        current_path = current_path + [(current_node.row, current_node.col)]
 
-# Example usage with coordinates:
-graph = {
-    (0, 0): {(0, 1): 2,(1, 0): 1}, #A 
-    (0, 1): {(0, 0): 2, (0, 2): 2 , (1, 1): 1}, #B
-    (0, 2): {(0, 1): 2, (1, 2): 1}, #C
-    (1, 0): {(0,0): 1, (1,1): 2, (2,0): 1}, #D
-    (1, 1): {(0, 1): 1, (1, 2): 2, (2, 1): 1, (1, 0): 2}, #E
-    (1, 2): {(1, 1): 2, (2, 2): 1, (0,2):1 }, #F
-    (2, 0): {(1, 0): 1, (2,1): 2}, #G
-    (2, 1): {(2, 0): 2, (1, 1): 1, (2,2): 2}, #H
-    (2, 2): {(2, 1): 2, (1, 2): 1} #I
-}
+        print(f"Expanded Node: ({current_node.row}, {current_node.col}), Cost: {current_cost}")
 
-start_node = (0, 0)
-goal_node = (0, 2)
+        if current_node == goal:
+            print(f"Goal reached! Final Path: {current_path}, Cost: {current_cost}")
+            return
 
-# Uniform Cost Search
-path_uniform_cost = uniform_cost_search(graph, start_node, goal_node)
-if path_uniform_cost:
-    print(f"Uniform Cost Search: Shortest path from {start_node} to {goal_node}: {path_uniform_cost}")
-else:
-    print(f"Uniform Cost Search: No path found from {start_node} to {goal_node}")
+        for neighbor, cost in current_node.neighbors:
+            heapq.heappush(heap, (current_cost + cost, neighbor.id, neighbor, current_path))
 
-# A* Search with Manhattan Distance as Heuristic
-path_a_star = a_star_search(graph, start_node, goal_node, manhattan_distance)
-if path_a_star:
-    print(f"A* Search: Shortest path from {start_node} to {goal_node}: {path_a_star}")
-else:
-    print(f"A* Search: No path found from {start_node} to {goal_node}")
+
+# Calculate Manhattan distance heuristic
+def manhattan_distance(node, goal):
+    return abs(node.row - goal.row) + abs(node.col - goal.col)
+
+# A* Search Algorithm
+def a_star_search(start, goal, max_expanded_nodes=10):
+    heap = [(0, 0, start.id, start, [])]  # Priority queue to store (f, g, id, node, path) tuples
+    visited = set()
+
+    while heap and len(visited) < max_expanded_nodes:
+        _, g, _, current_node, current_path = heapq.heappop(heap)
+        
+        if current_node in visited:
+            continue
+
+        visited.add(current_node)
+
+        current_path = current_path + [(current_node.row, current_node.col)]
+
+        h = manhattan_distance(current_node, goal)
+        print(f"Expanded Node: ({current_node.row}, {current_node.col}), Cost: {g}, Heuristic: {h}")
+
+        if current_node == goal:
+            print(f"Goal reached! Final Path: {current_path}, Cost: {g}")
+            return
+
+        for neighbor, cost in current_node.neighbors:
+            h_neighbor = manhattan_distance(neighbor, goal)
+            f = g + cost + h_neighbor
+            heapq.heappush(heap, (f, g + cost, neighbor.id, neighbor, current_path))
+
+# Call the function to connect neighbors
+connect_neighbors()
+
+# Set the source and goal nodes
+source_node = grid[0][0]
+goal_node = grid[2][0]
+
+# Run Uniform Cost Search
+uniform_cost_search(source_node, goal_node)
+# Run A* Search
+a_star_search(source_node, goal_node)
